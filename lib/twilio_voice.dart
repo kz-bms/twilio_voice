@@ -243,6 +243,7 @@ class Call {
     var options = extraOptions ?? Map<String, dynamic>();
     options['fromCaller'] = from;
     options['toCaller'] = to;
+    options.addAll(customParams ?? Map<String, dynamic>());
     return _channel.invokeMethod('makeCall', options);
   }
 

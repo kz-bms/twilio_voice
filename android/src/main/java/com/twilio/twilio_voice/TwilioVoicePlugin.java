@@ -6,6 +6,7 @@ import com.twilio.voice.Call;
 import com.twilio.voice.CallException;
 import com.twilio.voice.CallInvite;
 import com.twilio.voice.ConnectOptions;
+import com.twilio.voice.DefaultAudioDevice;
 import com.twilio.voice.RegistrationException;
 import com.twilio.voice.RegistrationListener;
 import com.twilio.voice.UnregistrationListener;
@@ -116,7 +117,10 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
         plugin.pSharedPref = context.getSharedPreferences(TwilioPreferences, Context.MODE_PRIVATE);
 
-
+        DefaultAudioDevice defaultAudioDevice = new DefaultAudioDevice();
+        defaultAudioDevice.setUseHardwareAcousticEchoCanceler(false);
+        defaultAudioDevice.setUseHardwareNoiseSuppressor(false);
+        Voice.setAudioDevice(defaultAudioDevice);
     }
 
 

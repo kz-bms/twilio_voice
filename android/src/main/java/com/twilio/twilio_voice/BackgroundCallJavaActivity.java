@@ -259,7 +259,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity {
                     }
                 });*/
 
-        FirebaseStorage.getInstance().getReferenceFromUrl("gs://keyzane-test-57c1a.appspot.com/images/users/" + imageUrl)
+        FirebaseStorage.getInstance().getReferenceFromUrl("gs://keyzane-prod.appspot.com/images/users/" + imageUrl)
                 .getDownloadUrl().addOnSuccessListener(uri -> {
                     Glide.with(this).load(uri).into(imageView);
                 });

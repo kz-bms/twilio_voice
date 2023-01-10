@@ -124,8 +124,8 @@ public class AnswerJavaActivity extends AppCompatActivity {
                     finish();
                     break;
                 case Constants.ACTION_TOGGLE_MUTE:
-                    boolean muted = activeCall.isMuted();
                     if(activeCall != null) {
+                        boolean muted = activeCall.isMuted();
                         activeCall.mute(!muted);
                     }
                     break;
@@ -199,13 +199,13 @@ public class AnswerJavaActivity extends AppCompatActivity {
         acceptIntent.putExtra(Constants.INCOMING_CALL_NOTIFICATION_ID, activeCallNotificationId);
         Log.d(TAG, "Clicked accept startService");
         startService(acceptIntent);
-        /*if (TwilioVoicePlugin.hasStarted) {
+        if (TwilioVoicePlugin.hasStarted) {
             finish();
-        } else {*/
+        } else {
             Log.d(TAG, "Answering call");
             activeCallInvite.accept(this, callListener);
             notificationManager.cancel(activeCallNotificationId);
-        //}
+        }
     }
 
     private void startAnswerActivity(Call call) {

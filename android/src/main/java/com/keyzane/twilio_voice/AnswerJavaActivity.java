@@ -1,4 +1,4 @@
-package com.twilio.twilio_voice;
+package com.keyzane.twilio_voice;
 
 import android.Manifest;
 import android.app.KeyguardManager;
@@ -36,7 +36,7 @@ import com.twilio.voice.CallInvite;
 public class AnswerJavaActivity extends AppCompatActivity {
 
     private static String TAG = "AnswerActivity";
-    public static final String TwilioPreferences = "com.twilio.twilio_voicePreferences";
+    public static final String TwilioPreferences = "com.keyzane.twilio_voicePreferences";
 
     private NotificationManager notificationManager;
     private boolean isReceiverRegistered = false;

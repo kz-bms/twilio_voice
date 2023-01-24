@@ -1,6 +1,4 @@
-package com.twilio.twilio_voice;
-
-import androidx.annotation.NonNull;
+package com.keyzane.twilio_voice;
 
 import com.twilio.voice.Call;
 import com.twilio.voice.CallException;
@@ -11,7 +9,7 @@ import com.twilio.voice.RegistrationException;
 import com.twilio.voice.RegistrationListener;
 import com.twilio.voice.UnregistrationListener;
 import com.twilio.voice.Voice;
-import com.twilio.twilio_voice.AnswerJavaActivity;
+import com.keyzane.twilio_voice.AnswerJavaActivity;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -57,13 +55,14 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
     private static final String CHANNEL_NAME = "twilio_voice";
     private static final String TAG = "TwilioVoicePlugin";
-    public static final String TwilioPreferences = "com.twilio.twilio_voicePreferences";
+    public static final String TwilioPreferences = "com.keyzane.twilio_voicePreferences";
     private static final int MIC_PERMISSION_REQUEST_CODE = 1;
     static boolean hasStarted = false;
 
     private String accessToken;
     private AudioManager audioManager;
-    private int savedAudioMode = AudioManager.MODE_INVALID;
+    private int savedAudioMode = AudioManager.MODE_NORMAL;
+    private AudioFocusRequest focusRequest;
     private int savedVolumeControlStream;
 
     private boolean isReceiverRegistered = false;
@@ -384,154 +383,181 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-        if (call.method.equals("tokens")) {
-            Log.d(TAG, "Setting up tokens");
-            this.accessToken = call.argument("accessToken");
-            this.fcmToken = call.argument("deviceToken");
-            this.registerForCallInvites();
-            result.success(true);
-        } else if (call.method.equals("sendDigits")) {
-            String digits = call.argument("digits");
-            if (this.activeCall != null) {
-                Log.d(TAG, "Sending digits " + digits);
-                this.activeCall.sendDigits(digits);
-            }
-            result.success(true);
-        } else if (call.method.equals("hangUp")) {
-            Log.d(TAG, "Hanging up");
-            this.disconnect();
-            result.success(true);
-        } else if (call.method.equals("toggleSpeaker")) {
-
-            boolean speakerIsOn = call.argument("speakerIsOn");
-            // if(speakerIsOn == null) return;
-            audioManager.setSpeakerphoneOn(speakerIsOn);
-            sendPhoneCallEvents(speakerIsOn ? "Speaker On" : "Speaker Off");
-
-            result.success(true);
-        } else if (call.method.equals("toggleMute")) {
-          boolean muted = call.argument("muted");
-            Log.d(TAG, "Muting call");
-            this.mute(muted);
-            result.success(true);
-        } else if (call.method.equals("call-sid")) {
-            result.success(activeCall == null ? null : activeCall.getSid());
-        } else if (call.method.equals("isOnCall")) {
-            Log.d(TAG, "Is on call invoked");
-            result.success(this.activeCall != null);
-        } else if (call.method.equals("holdCall")) {
-            Log.d(TAG, "Hold call invoked");
-            this.hold();
-            result.success(true);
-        } else if (call.method.equals("answer")) {
-            Log.d(TAG, "Answering call");
-            this.answer();
-            result.success(true);
-        } else if (call.method.equals("unregister")) {
-            String accessToken = call.argument("accessToken");
-            this.unregisterForCallInvites(accessToken);
-            result.success(true);
-        } else if (call.method.equals("makeCall")) {
-            Log.d(TAG, "Making new call");
-            sendPhoneCallEvents("LOG|Making new call");
-            final HashMap<String, String> params = new HashMap<>();
-            Map<String, Object> args = call.arguments();
-            for (Map.Entry<String, Object> entry : args.entrySet()) {
-                String key = entry.getKey();
-                Object value = entry.getValue();
-                if(value != null){
-                    params.put(key, value.toString());
+        switch (call.method) {
+            case "tokens":
+                Log.d(TAG, "Setting up tokens");
+                this.accessToken = call.argument("accessToken");
+                this.fcmToken = call.argument("deviceToken");
+                this.registerForCallInvites();
+                result.success(true);
+                break;
+            case "sendDigits":
+                String digits = call.argument("digits");
+                if (this.activeCall != null) {
+                    Log.d(TAG, "Sending digits " + digits);
+                    this.activeCall.sendDigits(digits);
                 }
-            }
-            this.callOutgoing = true;
-            final ConnectOptions connectOptions = new ConnectOptions.Builder(this.accessToken)
-                    .params(params)
-                    .build();
-            Log.d(TAG, "calling to " + call.argument("toCaller").toString());
-            this.activeCall = Voice.connect(this.activity, connectOptions, this.callListener);
-            result.success(true);
-        } else if (call.method.equals("registerClient")) {
-            String id = call.argument("id");
-            String name = call.argument("name");
-            boolean added = false;
-            if (id != null && name != null) {
-                sendPhoneCallEvents("LOG|Registering client " + id + ":" + name);
-                SharedPreferences.Editor edit = pSharedPref.edit();
-                edit.putString(id, name);
-                edit.apply();
-                added = true;
-            }
-            result.success(added);
-        } else if (call.method.equals("unregisterClient")) {
-            String id = call.argument("id");
-            boolean added = false;
-            if (id != null) {
-                sendPhoneCallEvents("LOG|Unregistering" + id);
-                SharedPreferences.Editor edit = pSharedPref.edit();
-                edit.remove(id);
-                edit.apply();
-                added = true;
-            }
-            result.success(added);
-        } else if (call.method.equals("defaultCaller")) {
-            String caller = call.argument("defaultCaller");
-            boolean added = false;
-            if (caller != null) {
-                sendPhoneCallEvents("LOG|defaultCaller is " + caller);
-                SharedPreferences.Editor edit = pSharedPref.edit();
-                edit.putString("defaultCaller", caller);
-                edit.apply();
-                added = true;
-            }
-            result.success(added);
-        } else if (call.method.equals("hasMicPermission")) {
-            result.success(this.checkPermissionForMicrophone());
-        } else if (call.method.equals("requestMicPermission")) {
-            sendPhoneCallEvents("LOG|requesting mic permission");
-            if (!this.checkPermissionForMicrophone()) {
-                boolean hasAccess = this.requestPermissionForMicrophone();
-                result.success(hasAccess);
-            } else {
                 result.success(true);
-            }
-        } else if (call.method.equals("backgroundCallUI")) {
-            if (activeCall != null) {
-                Intent intent = new Intent(activity, BackgroundCallJavaActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intent.putExtra(Constants.CALL_FROM, activeCall.getFrom());
-                intent.putExtra(Constants.CALL_FROM_NAME, activeCallInvite.getCustomParameters().get("callFromUser"));
-                activity.startActivity(intent);
-                backgroundCallUI = true;
-            }
-
-        } else if (call.method.equals("show-notifications")) {
-            boolean show = call.argument("show");
-            boolean prefsShow = pSharedPref.getBoolean("show-notifications", true);
-            if(show != prefsShow){
-                SharedPreferences.Editor edit = pSharedPref.edit();
-                edit.putBoolean("show-notifications", show);
-                edit.apply();
-            }
-        } else if (call.method.equals("requiresBackgroundPermissions")) {
-            String manufacturer = "xiaomi";
-            if (manufacturer.equalsIgnoreCase(android.os.Build.MANUFACTURER)) {
+                break;
+            case "hangUp":
+                Log.d(TAG, "Hanging up");
+                this.disconnect();
                 result.success(true);
-                return;
-            }
-            result.success(false);
-        } else if (call.method.equals("requestBackgroundPermissions")) {
-            String manufacturer = "xiaomi";
-            if (manufacturer.equalsIgnoreCase(android.os.Build.MANUFACTURER)) {
+                break;
+            case "toggleSpeaker":
 
-                Intent localIntent = new Intent("miui.intent.action.APP_PERM_EDITOR");
-                localIntent.setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity");
-                localIntent.putExtra("extra_pkgname", activity.getPackageName());
-                activity.startActivity(localIntent);
+                boolean speakerIsOn = call.argument("speakerIsOn");
+                // if(speakerIsOn == null) return;
+                audioManager.setSpeakerphoneOn(speakerIsOn);
+                sendPhoneCallEvents(speakerIsOn ? "Speaker On" : "Speaker Off");
+
+                result.success(true);
+                break;
+            case "toggleMute":
+                boolean muted = call.argument("muted");
+                Log.d(TAG, "Muting call");
+                this.mute(muted);
+                result.success(true);
+                break;
+            case "call-sid":
+                result.success(activeCall == null ? null : activeCall.getSid());
+                break;
+            case "isOnCall":
+                Log.d(TAG, "Is on call invoked");
+                result.success(this.activeCall != null);
+                break;
+            case "holdCall":
+                Log.d(TAG, "Hold call invoked");
+                this.hold();
+                result.success(true);
+                break;
+            case "answer":
+                Log.d(TAG, "Answering call");
+                this.answer();
+                result.success(true);
+                break;
+            case "unregister":
+                String accessToken = call.argument("accessToken");
+                this.unregisterForCallInvites(accessToken);
+                result.success(true);
+                break;
+            case "makeCall":
+                Log.d(TAG, "Making new call");
+                sendPhoneCallEvents("LOG|Making new call");
+                final HashMap<String, String> params = new HashMap<>();
+                Map<String, Object> args = call.arguments();
+                for (Map.Entry<String, Object> entry : args.entrySet()) {
+                    String key = entry.getKey();
+                    Object value = entry.getValue();
+                    if (value != null) {
+                        params.put(key, value.toString());
+                    }
+                }
+                this.callOutgoing = true;
+                final ConnectOptions connectOptions = new ConnectOptions.Builder(this.accessToken)
+                        .params(params)
+                        .build();
+                Log.d(TAG, "calling to " + call.argument("toCaller").toString());
+                this.activeCall = Voice.connect(this.activity, connectOptions, this.callListener);
+                result.success(true);
+                break;
+            case "registerClient": {
+                String id = call.argument("id");
+                String name = call.argument("name");
+                boolean added = false;
+                if (id != null && name != null) {
+                    sendPhoneCallEvents("LOG|Registering client " + id + ":" + name);
+                    SharedPreferences.Editor edit = pSharedPref.edit();
+                    edit.putString(id, name);
+                    edit.apply();
+                    added = true;
+                }
+                result.success(added);
+                break;
             }
-            result.success(true);
-        } else {
-            result.notImplemented();
+            case "unregisterClient": {
+                String id = call.argument("id");
+                boolean added = false;
+                if (id != null) {
+                    sendPhoneCallEvents("LOG|Unregistering" + id);
+                    SharedPreferences.Editor edit = pSharedPref.edit();
+                    edit.remove(id);
+                    edit.apply();
+                    added = true;
+                }
+                result.success(added);
+                break;
+            }
+            case "defaultCaller": {
+                String caller = call.argument("defaultCaller");
+                boolean added = false;
+                if (caller != null) {
+                    sendPhoneCallEvents("LOG|defaultCaller is " + caller);
+                    SharedPreferences.Editor edit = pSharedPref.edit();
+                    edit.putString("defaultCaller", caller);
+                    edit.apply();
+                    added = true;
+                }
+                result.success(added);
+                break;
+            }
+            case "hasMicPermission":
+                result.success(this.checkPermissionForMicrophone());
+                break;
+            case "requestMicPermission":
+                sendPhoneCallEvents("LOG|requesting mic permission");
+                if (!this.checkPermissionForMicrophone()) {
+                    boolean hasAccess = this.requestPermissionForMicrophone();
+                    result.success(hasAccess);
+                } else {
+                    result.success(true);
+                }
+                break;
+            case "backgroundCallUI":
+                if (activeCall != null) {
+                    Intent intent = new Intent(activity, BackgroundCallJavaActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    intent.putExtra(Constants.CALL_FROM, activeCall.getFrom());
+                    intent.putExtra(Constants.CALL_FROM_NAME, activeCallInvite.getCustomParameters().get("callFromUser"));
+                    activity.startActivity(intent);
+                    backgroundCallUI = true;
+                }
+
+                break;
+            case "show-notifications":
+                boolean show = call.argument("show");
+                boolean prefsShow = pSharedPref.getBoolean("show-notifications", true);
+                if (show != prefsShow) {
+                    SharedPreferences.Editor edit = pSharedPref.edit();
+                    edit.putBoolean("show-notifications", show);
+                    edit.apply();
+                }
+                break;
+            case "requiresBackgroundPermissions": {
+                String manufacturer = "xiaomi";
+                if (manufacturer.equalsIgnoreCase(Build.MANUFACTURER)) {
+                    result.success(true);
+                    return;
+                }
+                result.success(false);
+                break;
+            }
+            case "requestBackgroundPermissions": {
+                String manufacturer = "xiaomi";
+                if (manufacturer.equalsIgnoreCase(Build.MANUFACTURER)) {
+
+                    Intent localIntent = new Intent("miui.intent.action.APP_PERM_EDITOR");
+                    localIntent.setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity");
+                    localIntent.putExtra("extra_pkgname", activity.getPackageName());
+                    activity.startActivity(localIntent);
+                }
+                result.success(true);
+                break;
+            }
+            default:
+                result.notImplemented();
+                break;
         }
     }
 
@@ -614,7 +640,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
             @Override
             public void onConnectFailure(Call call, CallException error) {
-                // setAudioFocus(false);
+                setAudioFocus(false);
                 Log.d(TAG, "Connect failure");
                 String message = String.format("Call Error: %d, %s", error.getErrorCode(), error.getMessage());
                 Log.e(TAG, message);
@@ -624,7 +650,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
             @Override
             public void onConnected(Call call) {
-                // setAudioFocus(true);
+                setAudioFocus(true);
                 Log.d(TAG, "onConnected");
 //                eventSink.success("LOG|Connected");
                 activeCall = call;
@@ -648,7 +674,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
             @Override
             public void onDisconnected(Call call, CallException error) {
-                // setAudioFocus(false);
+                setAudioFocus(false);
                 Log.d(TAG, "Disconnected");
                 if (error != null) {
                     String message = String.format("Call Error: %d, %s", error.getErrorCode(), error.getMessage());
@@ -709,43 +735,23 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
             if (setFocus) {
                 savedAudioMode = audioManager.getMode();
                 // Request audio focus before making any device switch.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    AudioAttributes playbackAttributes = new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .build();
-                    AudioFocusRequest focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                            .setAudioAttributes(playbackAttributes)
-                            .setAcceptsDelayedFocusGain(true)
-                            .setOnAudioFocusChangeListener(new AudioManager.OnAudioFocusChangeListener() {
-                                @Override
-                                public void onAudioFocusChange(int i) {
-                                }
-                            })
-                            .build();
-                    audioManager.requestAudioFocus(focusRequest);
-                } else {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.FROYO) {
-                        int focusRequestResult = audioManager.requestAudioFocus(
-                                new AudioManager.OnAudioFocusChangeListener() {
+                AudioAttributes playbackAttributes = new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build();
+                focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                        .setAudioAttributes(playbackAttributes)
+                        .setAcceptsDelayedFocusGain(true)
+                        .setOnAudioFocusChangeListener(i -> {})
+                        .build();
 
-                                    @Override
-                                    public void onAudioFocusChange(int focusChange) {
-                                    }
-                                }, AudioManager.STREAM_VOICE_CALL,
-                                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
-                    }
-                }
-                /*
-                 * Start by setting MODE_IN_COMMUNICATION as default audio mode. It is
-                 * required to be in this mode when playout and/or recording starts for
-                 * best possible VoIP performance. Some devices have difficulties with speaker mode
-                 * if this is not set.
-                 */
+                audioManager.requestAudioFocus(focusRequest);
                 audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
             } else {
                 audioManager.setMode(savedAudioMode);
-                audioManager.abandonAudioFocus(null);
+                if(focusRequest != null) {
+                    audioManager.abandonAudioFocusRequest(focusRequest);
+                }
             }
         }
     }

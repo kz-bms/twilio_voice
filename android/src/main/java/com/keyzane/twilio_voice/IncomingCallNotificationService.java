@@ -1,4 +1,4 @@
-package com.twilio.twilio_voice;
+package com.keyzane.twilio_voice;
 
 import android.annotation.TargetApi;
 import android.app.Notification;
@@ -28,7 +28,7 @@ import com.twilio.voice.CancelledCallInvite;
 public class IncomingCallNotificationService extends Service {
 
     private static final String TAG = IncomingCallNotificationService.class.getSimpleName();
-    public static final String TwilioPreferences = "com.twilio.twilio_voicePreferences";
+    public static final String TwilioPreferences = "com.keyzane.twilio_voicePreferences";
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {

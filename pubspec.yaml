@@ -27,7 +27,7 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.twilio.twilio_voice
+        package: com.keyzane.twilio_voice
         pluginClass: TwilioVoicePlugin
       ios:
         pluginClass: TwilioVoicePlugin

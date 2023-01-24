@@ -1,4 +1,4 @@
-group 'com.twilio.twilio_voice'
+group 'com.keyzane.twilio_voice'
 version '1.0'
 
 buildscript {
@@ -32,7 +32,7 @@ android {
         targetCompatibility 1.8
     }
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 28
     }
     buildTypes {
         release {

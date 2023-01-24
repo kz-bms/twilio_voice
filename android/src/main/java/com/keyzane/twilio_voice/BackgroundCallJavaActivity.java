@@ -1,4 +1,4 @@
-package com.twilio.twilio_voice;
+package com.keyzane.twilio_voice;
 
 import android.Manifest;
 import android.app.Activity;
@@ -43,7 +43,7 @@ import com.twilio.voice.CallInvite;
 public class BackgroundCallJavaActivity extends AppCompatActivity {
 
     private static String TAG = "BackgroundCallActivity";
-    public static final String TwilioPreferences = "com.twilio.twilio_voicePreferences";
+    public static final String TwilioPreferences = "com.keyzane.twilio_voicePreferences";
 
 
     //    private Call activeCall;

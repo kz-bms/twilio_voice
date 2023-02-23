@@ -580,7 +580,8 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
     }
 
     @Override
-    public boolean onNewIntent(Intent intent) {
+    public boolean onNewIntent(@NonNull Intent intent) {
+        if(intent.getAction().equals("SELECT_NOTIFICATION")) return false;
         Log.d(TAG, "onNewIntent");
         this.handleIncomingCallIntent(intent);
         return false;

@@ -7,8 +7,9 @@ import CallKit
 import UserNotifications
 
 public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHandler, PKPushRegistryDelegate, NotificationDelegate, CallDelegate, AVAudioPlayerDelegate, CXProviderDelegate {
-
-
+    public static var instance: SwiftTwilioVoicePlugin?
+    
+    public var notificationCenter: UNUserNotificationCenter?
     var _result: FlutterResult?
     private var eventSink: FlutterEventSink?
 
@@ -90,13 +91,12 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
 
 
     public static func register(with registrar: FlutterPluginRegistrar) {
-
-        let instance = SwiftTwilioVoicePlugin()
+        instance = SwiftTwilioVoicePlugin()
         let methodChannel = FlutterMethodChannel(name: "twilio_voice/messages", binaryMessenger: registrar.messenger())
         let eventChannel = FlutterEventChannel(name: "twilio_voice/events", binaryMessenger: registrar.messenger())
         eventChannel.setStreamHandler(instance)
-        registrar.addMethodCallDelegate(instance, channel: methodChannel)
-        registrar.addApplicationDelegate(instance)
+        registrar.addMethodCallDelegate(instance!, channel: methodChannel)
+        registrar.addApplicationDelegate(instance!)
     }
 
     public func handle(_ flutterCall: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -504,40 +504,33 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         }
     }
 
-    func showMissedCallNotification(cancelledCallInvite: CancelledCallInvite){
+    func showMissedCallNotification(cancelledCallInvite: CancelledCallInvite) {
         guard UserDefaults.standard.optionalBool(forKey: "show-notifications") ?? true else{return}
-        let notificationCenter = UNUserNotificationCenter.current()
-
-        notificationCenter.requestAuthorization(completionHandler: { (granted, error) in
-            if granted {
-                notificationCenter.delegate = self
-            }
-        })
-
+        
         let fromName:String = cancelledCallInvite.customParameters?["callFromUser"] ?? defaultCaller
         let toName:String = cancelledCallInvite.customParameters?["callToUser"] ?? ""
         let from:String? = cancelledCallInvite.from
         let to:String = cancelledCallInvite.to
-
-        notificationCenter.getNotificationSettings { (settings) in
-          if settings.authorizationStatus == .authorized {
-            let content = UNMutableNotificationContent()
-              content.userInfo = ["type": "twilio-missed-call", "from": from!, "to": to, "fromCaller": fromName, "toCaller": toName, "customParameters": cancelledCallInvite.customParameters!]
-
-            content.title = String(format:  NSLocalizedString("Missed call from \(String(describing: fromName))", comment: ""))
-
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-            let request = UNNotificationRequest(identifier: UUID().uuidString,
-                                                content: content,
-                                                trigger: trigger)
-
-                notificationCenter.add(request) { (error) in
+        
+        notificationCenter?.getNotificationSettings { (settings) in
+            if settings.authorizationStatus == .authorized {
+                let content = UNMutableNotificationContent()
+                content.userInfo = ["twi_message_type": "twilio-missed-call", "from": from!, "to": to, "fromCaller": fromName, "toCaller": toName, "customParameters": cancelledCallInvite.customParameters!]
+                
+                content.title = String(format:  NSLocalizedString("Missed call from \(String(describing: fromName))", comment: ""))
+                
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+                let request = UNNotificationRequest(identifier: UUID().uuidString,
+                                                    content: content,
+                                                    trigger: trigger)
+                
+                self.notificationCenter?.add(request) { (error) in
                     if let error = error {
                         print("Notification Error: ", error)
                     }
                 }
-
-          }
+                
+            }
         }
     }
 
@@ -872,13 +865,12 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
             eventSink(description)
         }
     }
-
-
-
-    public func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    
+    public func handleFCMOnClick(_ response: UNNotificationResponse,
+                                 _ completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
-
-        if let type = userInfo["type"] as? String, type == "twilio-missed-call", let user = userInfo["from"] as? String{
+        
+        if let user = userInfo["from"] as? String{
             self.callTo = user
             if let to = userInfo["to"] as? String{
                 self.identity = to
@@ -888,16 +880,10 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
             self.sendPhoneCallEvents(description: "ReturningCall|\(identity)|\(user)|Outgoing\(formatCustomParams(params: userInfo["customParameters"]! as? [String : Any]))", isError: false)
         }
     }
-
-    public func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                willPresent notification: UNNotification,
-                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        let userInfo = notification.request.content.userInfo
-        if let type = userInfo["type"] as? String, type == "twilio-missed-call"{
-            completionHandler([.alert])
-        }
+    
+    public func handleFCMWillPresent(_ notification: UNNotification, _ completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.alert])
     }
-
 }
 
 extension UIWindow {

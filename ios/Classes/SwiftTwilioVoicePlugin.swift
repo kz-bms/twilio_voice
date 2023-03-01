@@ -539,7 +539,7 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         let direction = (self.callOutgoing ? "Outgoing" : "Incoming")
         let from = (call.from ?? self.identity)
         let to = (call.to ?? self.callTo)
-        self.sendPhoneCallEvents(description: "Ringing|\(from)|\(to)|\(direction)", isError: false)
+        self.sendPhoneCallEvents(description: "Ringing|\(from)|\(to)|\(direction)\(formatCustomParams(params: callInvite?.customParameters))", isError: false)
 
         //self.placeCallButton.setTitle("Ringing", for: .normal)
     }
@@ -548,7 +548,7 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         let direction = (self.callOutgoing ? "Outgoing" : "Incoming")
         let from = (call.from ?? self.identity)
         let to = (call.to ?? self.callTo)
-        self.sendPhoneCallEvents(description: "Connected|\(from)|\(to)|\(direction)", isError: false)
+        self.sendPhoneCallEvents(description: "Connected|\(from)|\(to)|\(direction)\(formatCustomParams(params: callInvite?.customParameters))", isError: false)
 
         if let callKitCompletionCallback = callKitCompletionCallback {
             callKitCompletionCallback(true)
@@ -695,7 +695,7 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         self.sendPhoneCallEvents(description: "LOG|provider:performEndCallAction:", isError: false)
 
 
-        if (self.callInvite != nil) {
+        if (self.call != nil && self.call!.state != .connected) {
             self.sendPhoneCallEvents(description: "LOG|provider:performEndCallAction: rejecting call", isError: false)
             self.callInvite?.reject()
             self.callInvite = nil
@@ -815,10 +815,9 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
             }
             self.sendPhoneCallEvents(description: "LOG|performAnswerVoiceCall: answering call", isError: false)
             let theCall = ci.accept(options: acceptOptions, delegate: self)
-            self.sendPhoneCallEvents(description: "Answer|\(ci.customParameters?["callFromUser"] ?? theCall.from!)|\(ci.customParameters?["callToUser"] ?? theCall.to!)\(formatCustomParams(params: ci.customParameters))", isError:false)
+            self.sendPhoneCallEvents(description: "Answer|\(ci.customParameters?["callFromUser"] ?? theCall.from!)|\(ci.customParameters?["callToUser"] ?? theCall.to!)|Incoming\(formatCustomParams(params: ci.customParameters))", isError:false)
             self.call = theCall
             self.callKitCompletionCallback = completionHandler
-            self.callInvite = nil
 
             guard #available(iOS 13, *) else {
                 self.incomingPushHandled()

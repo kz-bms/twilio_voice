@@ -69,10 +69,18 @@ public class IncomingCallNotificationService extends Service {
 
     private Notification createNotification(CallInvite callInvite, int notificationId, int channelImportance) {
         Log.i(TAG, "createNotification");
-        Intent intent = new Intent(this, AnswerJavaActivity.class);
+        Intent intent = getPackageManager().getLaunchIntentForPackage(getApplicationContext().getPackageName());
+
+        Log.e(TAG, TwilioVoicePlugin.getAppState() + "||"+ TwilioVoicePlugin.hasStarted);
+
+        if(TwilioVoicePlugin.getAppState().isAtLeast(Lifecycle.State.STARTED) || (TwilioVoicePlugin.getAppState().isAtLeast(Lifecycle.State.CREATED) && TwilioVoicePlugin.hasStarted)) {
+            intent = new Intent(this, AnswerJavaActivity.class);
+        }
+
         intent.setAction(Constants.ACTION_INCOMING_CALL_NOTIFICATION);
         intent.putExtra(Constants.INCOMING_CALL_NOTIFICATION_ID, notificationId);
         intent.putExtra(Constants.INCOMING_CALL_INVITE, callInvite);
+        intent.putExtra(Constants.OPEN_ANSWER_ACTIVITY, true);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = null;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -106,7 +114,7 @@ public class IncomingCallNotificationService extends Service {
         } else {
             Log.i(TAG, "building notification for older phones");
 
-            return new NotificationCompat.Builder(this)
+            return new NotificationCompat.Builder(this, createChannel(channelImportance))
                     .setSmallIcon(R.drawable.ic_call_end_white_24dp)
                     .setContentTitle(getApplicationName(context))
                     .setContentText(getString(R.string.new_call, caller))
@@ -154,33 +162,32 @@ public class IncomingCallNotificationService extends Service {
             piRejectIntent = PendingIntent.getService(getApplicationContext(), 0, rejectIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         }
 
-        Intent acceptIntent = new Intent(getApplicationContext(), IncomingCallNotificationService.class);
+        Intent acceptIntent = new Intent(getApplicationContext(), AnswerJavaActivity.class);
         acceptIntent.setAction(Constants.ACTION_ACCEPT);
         acceptIntent.putExtra(Constants.ACCEPT_CALL_ORIGIN, 0);
         acceptIntent.putExtra(Constants.INCOMING_CALL_INVITE, callInvite);
         acceptIntent.putExtra(Constants.INCOMING_CALL_NOTIFICATION_ID, notificationId);
         PendingIntent piAcceptIntent = null;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            piAcceptIntent = PendingIntent.getService(getApplicationContext(), 0, acceptIntent, PendingIntent.FLAG_MUTABLE);
+            piAcceptIntent = PendingIntent.getActivity(getApplicationContext(), 0, acceptIntent, PendingIntent.FLAG_MUTABLE);
         } else {
             piAcceptIntent = PendingIntent.getService(getApplicationContext(), 0, acceptIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         }
 
         long[] mVibratePattern = new long[]{0, 400, 400, 400, 400, 400, 400, 400};
-        Notification.Builder builder =
-                new Notification.Builder(getApplicationContext(), channelId)
-                        .setSmallIcon(R.drawable.ic_call_end_white_24dp)
-                        .setContentTitle(title)
-                        .setContentText(text)
-                        .setCategory(Notification.CATEGORY_CALL)
-                        .setFullScreenIntent(pendingIntent, true)
-                        .setExtras(extras)
-                        .setVibrate(mVibratePattern)
-                        .setAutoCancel(true)
-                        .setVisibility(Notification.VISIBILITY_PUBLIC)
-                        .addAction(android.R.drawable.ic_menu_delete, getString(R.string.decline), piRejectIntent)
-                        .addAction(android.R.drawable.ic_menu_call, getString(R.string.answer), piAcceptIntent)
-                        .setFullScreenIntent(pendingIntent, true);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), channelId)
+                .setSmallIcon(R.drawable.ic_call_end_white_24dp)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setCategory(Notification.CATEGORY_CALL)
+                .setContentIntent(pendingIntent)
+                .setExtras(extras)
+                .setVibrate(mVibratePattern)
+                .setAutoCancel(true)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)/*
+                .addAction(android.R.drawable.ic_menu_delete, getString(R.string.decline), piRejectIntent)
+                .addAction(android.R.drawable.ic_menu_call, getString(R.string.answer), piAcceptIntent)*/
+                .setFullScreenIntent(pendingIntent, true);
 
         return builder.build();
     }
@@ -212,7 +219,7 @@ public class IncomingCallNotificationService extends Service {
         SoundPoolManager.getInstance(this).stopRinging();
 
         Intent activeCallIntent;
-        if (origin == 0 && !isAppVisible()) {
+        if (origin == 0 && !TwilioVoicePlugin.isAppVisible()) {
             Log.i(TAG, "Creating answerJavaActivity intent");
             activeCallIntent = new Intent(this, AnswerJavaActivity.class);
         } else {
@@ -226,7 +233,7 @@ public class IncomingCallNotificationService extends Service {
         activeCallIntent.putExtra(Constants.INCOMING_CALL_NOTIFICATION_ID, notificationId);
         activeCallIntent.putExtra(Constants.ACCEPT_CALL_ORIGIN, origin);
         activeCallIntent.setAction(Constants.ACTION_ACCEPT);
-        if (origin == 0 && !isAppVisible()) {
+        if (origin == 0 && !TwilioVoicePlugin.isAppVisible()) {
             startActivity(activeCallIntent);
             Log.i(TAG, "starting activity");
         } else {
@@ -298,8 +305,6 @@ public class IncomingCallNotificationService extends Service {
 
             NotificationCompat.Builder builder =
                     new NotificationCompat.Builder(this, createChannel(NotificationManager.IMPORTANCE_HIGH))
-
-
                             .setSmallIcon(R.drawable.ic_call_end_white_24dp)
                             .setContentTitle(title)
                             .setCategory(Notification.CATEGORY_CALL)
@@ -312,7 +317,7 @@ public class IncomingCallNotificationService extends Service {
 
             notification = builder.build();
         } else {
-            notification = new NotificationCompat.Builder(this)
+            notification = new NotificationCompat.Builder(this, createChannel(NotificationManager.IMPORTANCE_HIGH))
                     .setSmallIcon(R.drawable.ic_call_end_white_24dp)
                     .setContentTitle(getApplicationName(context))
                     .setContentText(title)
@@ -342,7 +347,7 @@ public class IncomingCallNotificationService extends Service {
 
     @TargetApi(Build.VERSION_CODES.O)
     private void setCallInProgressNotification(CallInvite callInvite, int notificationId) {
-        if (isAppVisible()) {
+        if (TwilioVoicePlugin.isAppVisible()) {
             Log.i(TAG, "setCallInProgressNotification - app is visible.");
             startForeground(notificationId, createNotification(callInvite, notificationId, NotificationManager.IMPORTANCE_LOW));
         } else {
@@ -364,7 +369,7 @@ public class IncomingCallNotificationService extends Service {
         pluginIntent.putExtra(Constants.INCOMING_CALL_NOTIFICATION_ID, notificationId);
         pluginIntent.putExtra(Constants.INCOMING_CALL_INVITE, callInvite);
         LocalBroadcastManager.getInstance(this).sendBroadcast(pluginIntent);
-        if (TwilioVoicePlugin.hasStarted || (Build.VERSION.SDK_INT >= 29 && !isAppVisible())) {
+        if (TwilioVoicePlugin.hasStarted || (Build.VERSION.SDK_INT >= 29 && !TwilioVoicePlugin.isAppVisible())) {
             return;
         }
         startAnswerActivity(callInvite, notificationId);
@@ -378,13 +383,5 @@ public class IncomingCallNotificationService extends Service {
         intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
-    }
-
-    private boolean isAppVisible() {
-        return ProcessLifecycleOwner
-                .get()
-                .getLifecycle()
-                .getCurrentState()
-                .isAtLeast(Lifecycle.State.STARTED);
     }
 }

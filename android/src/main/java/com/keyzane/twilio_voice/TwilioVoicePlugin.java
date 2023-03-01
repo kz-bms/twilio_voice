@@ -1,19 +1,5 @@
 package com.keyzane.twilio_voice;
 
-import com.twilio.voice.Call;
-import com.twilio.voice.CallException;
-import com.twilio.voice.CallInvite;
-import com.twilio.voice.ConnectOptions;
-import com.twilio.voice.DefaultAudioDevice;
-import com.twilio.voice.RegistrationException;
-import com.twilio.voice.RegistrationListener;
-import com.twilio.voice.UnregistrationListener;
-import com.twilio.voice.Voice;
-import com.keyzane.twilio_voice.AnswerJavaActivity;
-
-import java.util.HashMap;
-import java.util.Map;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.NotificationManager;
@@ -33,10 +19,24 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.twilio.voice.Call;
+import com.twilio.voice.CallException;
+import com.twilio.voice.CallInvite;
+import com.twilio.voice.ConnectOptions;
+import com.twilio.voice.DefaultAudioDevice;
+import com.twilio.voice.RegistrationException;
+import com.twilio.voice.RegistrationListener;
+import com.twilio.voice.UnregistrationListener;
+import com.twilio.voice.Voice;
+
 import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
@@ -47,8 +47,6 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
-
-import static java.lang.Boolean.getBoolean;
 
 public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler,
         ActivityAware, PluginRegistry.NewIntentListener {
@@ -543,6 +541,13 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
                 result.success(false);
                 break;
             }
+            case "setActiveCall": {
+                if(this.activeCall != null) {
+                    sendPhoneCallEvents("SetActiveCall|" + activeCall.getFrom() + "|" + activeCall.getTo() + "|" + (callOutgoing ? "Outgoing" : "Incoming" + formatCustomParams(activeCallInvite.getCustomParameters())));
+                }
+                result.success(true);
+                break;
+            }
             case "requestBackgroundPermissions": {
                 String manufacturer = "xiaomi";
                 if (manufacturer.equalsIgnoreCase(Build.MANUFACTURER)) {
@@ -776,11 +781,15 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
         }
     }
 
-    private boolean isAppVisible() {
+    public static boolean isAppVisible() {
         return ProcessLifecycleOwner
                 .get()
                 .getLifecycle()
                 .getCurrentState()
                 .isAtLeast(Lifecycle.State.STARTED);
+    }
+
+    public static Lifecycle.State getAppState() {
+        return ProcessLifecycleOwner.get().getLifecycle().getCurrentState();
     }
 }

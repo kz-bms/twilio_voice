@@ -146,7 +146,11 @@ class TwilioVoice {
         return CallEvent.declined;
       }
       return CallEvent.log;
-    } else if (state.startsWith("Connected|")) {
+    } else if(state.startsWith("SetActiveCall|")) {
+      call._activeCall = createCallFromState(state, initiated: true);
+      return CallEvent.connected;
+    }
+    else if (state.startsWith("Connected|")) {
       call._activeCall = createCallFromState(state, initiated: true);
       print(
           'Connected - From: ${call._activeCall!.from}, To: ${call._activeCall!.to}, StartOn: ${call._activeCall!.initiated}, Direction: ${call._activeCall!.callDirection}');
@@ -260,6 +264,12 @@ class Call {
   /// Checks if there is an ongoing call
   Future<bool> isOnCall() {
     return _channel.invokeMethod<bool?>('isOnCall',
+        <String, dynamic>{}).then<bool>((bool? value) => value ?? false);
+  }
+
+  /// Set _activeCall from native if available.
+  Future<bool> setActiveCall() {
+    return _channel.invokeMethod<bool?>('setActiveCall',
         <String, dynamic>{}).then<bool>((bool? value) => value ?? false);
   }
 

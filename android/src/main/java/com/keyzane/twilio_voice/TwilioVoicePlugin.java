@@ -660,7 +660,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
                  */
                 savedVolumeControlStream = activity.getVolumeControlStream();
                 activity.setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
-                sendPhoneCallEvents("Connected|" + call.getFrom() + "|" + call.getTo() + "|" + (callOutgoing ? "Outgoing" : "Incoming") + formatCustomParams(activeCallInvite.getCustomParameters()));
+                sendPhoneCallEvents("Connected|" + call.getFrom() + "|" + call.getTo() + "|" + (callOutgoing ? "Outgoing" : "Incoming") + (callOutgoing ? "" : formatCustomParams(activeCallInvite.getCustomParameters())));
             }
 
             @Override

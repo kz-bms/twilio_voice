@@ -139,6 +139,11 @@ class TwilioVoice {
       } else if(tokens.toString().toLowerCase().contains("rejecting call")) {
         // iOS call reject froms tring: "LOG|provider:performEndCallAction: rejecting call"
         return CallEvent.declined;
+      } else if(tokens[1].contains("31486")){
+        return CallEvent.declined;
+      } else if(tokens.toString().toLowerCase().contains("busy here")){
+        // iOS call reject forms a string :"LOG|Call failed to connect: Busy Here"
+        return CallEvent.declined;
       }
       return CallEvent.log;
     } else if (state.startsWith("Connected|")) {

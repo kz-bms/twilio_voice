@@ -549,6 +549,7 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         let from = (call.from ?? self.identity)
         let to = (call.to ?? self.callTo)
         self.sendPhoneCallEvents(description: "Connected|\(from)|\(to)|\(direction)\(formatCustomParams(params: callInvite?.customParameters))", isError: false)
+        self.callInvite = nil
 
         if let callKitCompletionCallback = callKitCompletionCallback {
             callKitCompletionCallback(true)
@@ -693,16 +694,17 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
 
     public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
         self.sendPhoneCallEvents(description: "LOG|provider:performEndCallAction:", isError: false)
-
-
-        if (self.call != nil && self.call!.state != .connected) {
+        
+        
+        if (self.callInvite != nil) {
             self.sendPhoneCallEvents(description: "LOG|provider:performEndCallAction: rejecting call", isError: false)
             self.callInvite?.reject()
             self.callInvite = nil
-        }else if let call = self.call {
+        } else if let call = self.call {
             self.sendPhoneCallEvents(description: "LOG|provider:performEndCallAction: disconnecting call", isError: false)
             call.disconnect()
         }
+        
         action.fulfill()
     }
 

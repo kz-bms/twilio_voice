@@ -788,7 +788,7 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
             if let error = error {
                 self.sendPhoneCallEvents(description: "End Call Failed: \(error.localizedDescription).", isError: true)
             } else {
-                self.sendPhoneCallEvents(description: "Call Ended", isError: false)
+                //self.sendPhoneCallEvents(description: "Call Ended", isError: false)
             }
         }
     }
@@ -867,19 +867,8 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         }
     }
     
-    public func handleFCMOnClick(_ response: UNNotificationResponse,
-                                 _ completionHandler: @escaping () -> Void) {
-        let userInfo = response.notification.request.content.userInfo
-        
-        if let user = userInfo["from"] as? String{
-            self.callTo = user
-            if let to = userInfo["to"] as? String{
-                self.identity = to
-            }
-            makeCall(to: callTo)
-            completionHandler()
-            self.sendPhoneCallEvents(description: "ReturningCall|\(identity)|\(user)|Outgoing\(formatCustomParams(params: userInfo["customParameters"]! as? [String : Any]))", isError: false)
-        }
+    public func handleFCMOnClick(_ response: UNNotificationResponse, _ completionHandler: @escaping () -> Void) {
+        completionHandler()
     }
     
     public func handleFCMWillPresent(_ notification: UNNotification, _ completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {

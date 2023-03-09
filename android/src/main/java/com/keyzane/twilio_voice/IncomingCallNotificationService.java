@@ -285,19 +285,18 @@ public class IncomingCallNotificationService extends Service {
         SharedPreferences preferences = context.getSharedPreferences(TwilioPreferences, Context.MODE_PRIVATE);
         //String callerName = preferences.getString(fromId, preferences.getString("defaultCaller", "Unknown caller"));
         String title = getString(R.string.notification_missed_call, callerName);
+        Intent launchIntent = new Intent();
 
-
-        Intent returnCallIntent = new Intent(getApplicationContext(), IncomingCallNotificationService.class);
-        returnCallIntent.setAction(Constants.ACTION_RETURN_CALL);
-        returnCallIntent.putExtra(Constants.CALL_TO, to);
-        returnCallIntent.putExtra(Constants.CALL_TO_NAME, callerName);
-        returnCallIntent.putExtra(Constants.CALL_FROM, callerId);
-        returnCallIntent.putExtra(Constants.CALL_FROM_NAME, receiverName);
+        if(!TwilioVoicePlugin.isAppVisible()){
+            launchIntent = getPackageManager().getLaunchIntentForPackage(getApplicationContext().getPackageName());
+            launchIntent.setAction(Constants.ACTION_RETURN_CALL);
+            launchIntent.putExtra(Constants.ACTION_RETURN_CALL,true);
+        }
         PendingIntent piReturnCallIntent = null;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            piReturnCallIntent = PendingIntent.getService(getApplicationContext(), 0, returnCallIntent, PendingIntent.FLAG_MUTABLE);
+            piReturnCallIntent = PendingIntent.getActivity(getApplicationContext(), 0, launchIntent, PendingIntent.FLAG_MUTABLE);
         } else {
-            piReturnCallIntent = PendingIntent.getService(getApplicationContext(), 0, returnCallIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+            piReturnCallIntent = PendingIntent.getActivity(getApplicationContext(), 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         }
 
         Notification notification;
@@ -309,11 +308,12 @@ public class IncomingCallNotificationService extends Service {
                             .setContentTitle(title)
                             .setCategory(Notification.CATEGORY_CALL)
                             .setAutoCancel(true)
-                            .addAction(android.R.drawable.ic_menu_call, getString(R.string.twilio_call_back), piReturnCallIntent)
+                           /* .addAction(android.R.drawable.ic_menu_call, getString(R.string.twilio_call_back), piReturnCallIntent)*/
                             .setPriority(NotificationCompat.PRIORITY_HIGH)
                             .setContentTitle(getApplicationName(context))
                             .setContentText(title)
-                            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+                            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                            .setContentIntent(piReturnCallIntent);
 
             notification = builder.build();
         } else {

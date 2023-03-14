@@ -35,6 +35,7 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
     var callKitCompletionCallback: ((Bool)->Swift.Void?)? = nil
     var audioDevice: DefaultAudioDevice = DefaultAudioDevice()
     
+    var configuration = CXProviderConfiguration(localizedName: SwiftTwilioVoicePlugin.appName)
     var callKitProvider: CXProvider
     var callKitCallController: CXCallController
     var userInitiatedDisconnect: Bool = false
@@ -50,7 +51,6 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         
         //isSpinning = false
         voipRegistry = PKPushRegistry.init(queue: DispatchQueue.main)
-        let configuration = CXProviderConfiguration(localizedName: SwiftTwilioVoicePlugin.appName)
         configuration.maximumCallGroups = 1
         configuration.maximumCallsPerCallGroup = 1
         if let callKitIcon = UIImage(named: "callkit_icon") {
@@ -125,6 +125,9 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
             }
             self.callTo = callTo
             self.identity = callFrom
+            
+            self.callKitProvider = CXProvider(configuration: configuration)
+            self.callKitProvider.setDelegate(self, queue: nil)
             makeCall(to: callTo)
         }
         else if flutterCall.method == "toggleMute"
@@ -789,8 +792,6 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         callKitCallController.request(transaction) { error in
             if let error = error {
                 self.sendPhoneCallEvents(description: "End Call Failed: \(error.localizedDescription).", isError: true)
-            } else {
-                //self.sendPhoneCallEvents(description: "Call Ended", isError: false)
             }
         }
     }

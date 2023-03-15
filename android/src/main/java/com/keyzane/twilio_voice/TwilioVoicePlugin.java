@@ -228,7 +228,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
     private void handleCancel() {
         callOutgoing = false;
         sendPhoneCallEvents("Missed Call");
-        sendPhoneCallEvents("Call Ended");
+//        sendPhoneCallEvents("Call Ended");
 
         Intent intent = new Intent(activity, AnswerJavaActivity.class);
         intent.setAction(Constants.ACTION_CANCEL_CALL);

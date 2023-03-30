@@ -58,6 +58,7 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         }
         
         clients = UserDefaults.standard.object(forKey: kClientList)  as? [String:String] ?? [:]
+        configuration.supportedHandleTypes = [.phoneNumber]
         callKitProvider = CXProvider(configuration: configuration)
         callKitCallController = CXCallController()
         

@@ -53,6 +53,7 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         voipRegistry = PKPushRegistry.init(queue: DispatchQueue.main)
         configuration.maximumCallGroups = 1
         configuration.maximumCallsPerCallGroup = 1
+        configuration.supportsVideo = true
         if let callKitIcon = UIImage(named: "callkit_icon") {
             configuration.iconTemplateImageData = callKitIcon.pngData()
         }

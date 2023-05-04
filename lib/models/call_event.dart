@@ -15,4 +15,6 @@ enum CallEvent {
   answer,
   missedCall,
   returningCall,
+  reconnectingCall,
+  reconnected
 }

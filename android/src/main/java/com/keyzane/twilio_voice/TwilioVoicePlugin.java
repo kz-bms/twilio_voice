@@ -672,11 +672,13 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
             @Override
             public void onReconnecting(@NonNull Call call, @NonNull CallException callException) {
                 Log.d(TAG, "onReconnecting");
+                sendPhoneCallEvents("Reconnecting|" + call.getFrom() + "|" + call.getTo() + "|" + (callOutgoing ? "Outgoing" : "Incoming" + formatCustomParams(activeCallInvite.getCustomParameters())));
             }
 
             @Override
             public void onReconnected(@NonNull Call call) {
                 Log.d(TAG, "onReconnected");
+                sendPhoneCallEvents("Reconnected|" + call.getFrom() + "|" + call.getTo() + "|" + (callOutgoing ? "Outgoing" : "Incoming" + formatCustomParams(activeCallInvite.getCustomParameters())));
             }
 
             @Override

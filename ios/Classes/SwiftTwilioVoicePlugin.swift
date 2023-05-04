@@ -565,14 +565,20 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         toggleAudioRoute(toSpeaker: false)
     }
     
-    public func call(call: Call, isReconnectingWithError error: Error) {
-        self.sendPhoneCallEvents(description: "LOG|call:isReconnectingWithError:", isError: false)
-        
-    }
-    
-    public func callDidReconnect(call: Call) {
-        self.sendPhoneCallEvents(description: "LOG|callDidReconnect:", isError: false)
-    }
+   public func call(call: Call, isReconnectingWithError error: Error) {
+          let direction = (self.callOutgoing ? "Outgoing" : "Incoming")
+          let from = (call.from ?? self.identity)
+          let to = (call.to ?? self.callTo)
+          self.sendPhoneCallEvents(description: "Reconnecting|\(from)|\(to)|\(direction)\(formatCustomParams(params: callInvite?.customParameters))", isError: false)
+
+      }
+
+      public func callDidReconnect(call: Call) {
+          let direction = (self.callOutgoing ? "Outgoing" : "Incoming")
+          let from = (call.from ?? self.identity)
+          let to = (call.to ?? self.callTo)
+          self.sendPhoneCallEvents(description: "Reconnected|\(from)|\(to)|\(direction)\(formatCustomParams(params: callInvite?.customParameters))", isError: false)
+      }
     
     public func callDidFailToConnect(call: Call, error: Error) {
         self.sendPhoneCallEvents(description: "LOG|Call failed to connect: \(error.localizedDescription)", isError: false)

@@ -178,6 +178,21 @@ class TwilioVoice {
           'Returning Call - From: ${call._activeCall!.from}, To: ${call._activeCall!.to}, Direction: ${call._activeCall!.callDirection}');
 
       return CallEvent.returningCall;
+    } else if (state.startsWith("Reconnecting")){
+      call._activeCall =
+          createCallFromState(state, callDirection: "Incoming" == state.split("|")[3]
+              ? CallDirection.incoming
+              : CallDirection.outgoing);
+
+      print(
+          'Reconnecting Call - From: ${call._activeCall!.from}, To: ${call._activeCall!.to}, Direction: ${call._activeCall!.callDirection}');
+      return CallEvent.reconnectingCall;
+    } else if (state.startsWith("Reconnected")){
+      call._activeCall = createCallFromState(state, initiated: true);
+
+      print(
+          'Connected - From: ${call._activeCall!.from}, To: ${call._activeCall!.to}, StartOn: ${call._activeCall!.initiated}, Direction: ${call._activeCall!.callDirection}');
+      return CallEvent.reconnected;
     }
     switch (state) {
       case 'Ringing':

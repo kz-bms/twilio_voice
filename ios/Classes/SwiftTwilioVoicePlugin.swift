@@ -128,8 +128,6 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
             self.callTo = callTo
             self.identity = callFrom
             
-            self.callKitProvider = CXProvider(configuration: configuration)
-            self.callKitProvider.setDelegate(self, queue: nil)
             makeCall(to: callTo)
         }
         else if flutterCall.method == "toggleMute"

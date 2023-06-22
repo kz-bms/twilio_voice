@@ -2,6 +2,7 @@ library twilio_voice;
 
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/services.dart';
 
 part 'models/active_call.dart';
@@ -60,9 +61,11 @@ class TwilioVoice {
   /// Unregisters from Twilio
   ///
   /// If no accesToken is provided, previously registered accesToken will be used
-  Future<bool?> unregister({String? accessToken}) {
-    return _channel.invokeMethod(
-        'unregister', <String, dynamic>{"accessToken": accessToken});
+  Future<bool?> unregister({String? accessToken, String? deviceToken}) {
+    return _channel.invokeMethod('unregister', <String, dynamic>{
+      "accessToken": accessToken,
+      "deviceToken": deviceToken
+    });
   }
 
   /// Checks if device needs background permission
@@ -131,26 +134,25 @@ class TwilioVoice {
 
       // source: https://www.twilio.com/docs/api/errors/31603
       // The callee does not wish to participate in the call.
-      if(tokens[1].contains("31603")) {
+      if (tokens[1].contains("31603")) {
         return CallEvent.declined;
-      } else if(tokens.toString().toLowerCase().contains("call rejected")) {
+      } else if (tokens.toString().toLowerCase().contains("call rejected")) {
         // Android call reject from string: "LOG|Call Rejected"
         return CallEvent.declined;
-      } else if(tokens.toString().toLowerCase().contains("rejecting call")) {
+      } else if (tokens.toString().toLowerCase().contains("rejecting call")) {
         // iOS call reject froms tring: "LOG|provider:performEndCallAction: rejecting call"
         return CallEvent.declined;
-      } else if(tokens[1].contains("31486")){
+      } else if (tokens[1].contains("31486")) {
         return CallEvent.declined;
-      } else if(tokens.toString().toLowerCase().contains("busy here")){
+      } else if (tokens.toString().toLowerCase().contains("busy here")) {
         // iOS call reject forms a string :"LOG|Call failed to connect: Busy Here"
         return CallEvent.declined;
       }
       return CallEvent.log;
-    } else if(state.startsWith("SetActiveCall|")) {
+    } else if (state.startsWith("SetActiveCall|")) {
       call._activeCall = createCallFromState(state, initiated: true);
       return CallEvent.connected;
-    }
-    else if (state.startsWith("Connected|")) {
+    } else if (state.startsWith("Connected|")) {
       call._activeCall = createCallFromState(state, initiated: true);
       print(
           'Connected - From: ${call._activeCall!.from}, To: ${call._activeCall!.to}, StartOn: ${call._activeCall!.initiated}, Direction: ${call._activeCall!.callDirection}');
@@ -178,16 +180,16 @@ class TwilioVoice {
           'Returning Call - From: ${call._activeCall!.from}, To: ${call._activeCall!.to}, Direction: ${call._activeCall!.callDirection}');
 
       return CallEvent.returningCall;
-    } else if (state.startsWith("Reconnecting")){
-      call._activeCall =
-          createCallFromState(state, callDirection: "Incoming" == state.split("|")[3]
+    } else if (state.startsWith("Reconnecting")) {
+      call._activeCall = createCallFromState(state,
+          callDirection: "Incoming" == state.split("|")[3]
               ? CallDirection.incoming
               : CallDirection.outgoing);
 
       print(
           'Reconnecting Call - From: ${call._activeCall!.from}, To: ${call._activeCall!.to}, Direction: ${call._activeCall!.callDirection}');
       return CallEvent.reconnectingCall;
-    } else if (state.startsWith("Reconnected")){
+    } else if (state.startsWith("Reconnected")) {
       call._activeCall = createCallFromState(state, initiated: true);
 
       print(
@@ -260,9 +262,13 @@ class Call {
   Future<bool?> place(
       {required String from,
       required String to,
-      Map<String, dynamic>? extraOptions, Map<String, dynamic>? customParams}) {
-    _activeCall =
-        ActiveCall(from: from, to: to, callDirection: CallDirection.outgoing, customParams: customParams);
+      Map<String, dynamic>? extraOptions,
+      Map<String, dynamic>? customParams}) {
+    _activeCall = ActiveCall(
+        from: from,
+        to: to,
+        callDirection: CallDirection.outgoing,
+        customParams: customParams);
 
     var options = extraOptions ?? Map<String, dynamic>();
     options['fromCaller'] = from;
@@ -290,7 +296,8 @@ class Call {
 
   /// Gets the active call's SID. This will be null until the first Ringing event occurs
   Future<String?> getSid() {
-    return _channel.invokeMethod<String?>('call-sid', <String, dynamic>{}).then<String?>((String? value) => value);
+    return _channel.invokeMethod<String?>('call-sid',
+        <String, dynamic>{}).then<String?>((String? value) => value);
   }
 
   /// Answers incoming call

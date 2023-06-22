@@ -436,6 +436,13 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
                 break;
             case "unregister":
                 String accessToken = call.argument("accessToken");
+
+                if(accessToken != null && call.argument("deviceToken") != null) {
+                    Voice.unregister(accessToken, Voice.RegistrationChannel.FCM, call.argument("deviceToken"), unregistrationListener);
+                    result.success(true);
+                    break;
+                }
+
                 this.unregisterForCallInvites(accessToken);
                 result.success(true);
                 break;

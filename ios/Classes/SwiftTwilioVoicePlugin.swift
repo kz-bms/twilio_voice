@@ -191,6 +191,12 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
             // nuthin
         }
         else if flutterCall.method == "unregister" {
+            if let deviceToken = getDeviceToken(deviceToken: arguments["deviceToken"] as? String ?? ""), let accessToken = arguments["accessToken"] as? String {
+                self.sendPhoneCallEvents(description: "LOG|Attempting to unregister device token \((deviceToken as NSData).description)", isError: false)
+                self.unregisterTokens(token: accessToken, deviceToken: deviceToken)
+                return
+            }
+            
             guard let deviceToken = deviceToken else {
                 return
             }
@@ -882,6 +888,23 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
     public func handleFCMWillPresent(_ notification: UNNotification, _ completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.alert])
     }
+    
+    public func getDeviceToken(deviceToken: String) -> Data? {
+        let deviceTokenString = deviceToken // Replace with your device token string
+
+        // Remove any non-hex characters (e.g., whitespace, "<", ">") from the device token string
+        let cleanTokenString = deviceTokenString.replacingOccurrences(of: "[^0-9a-fA-F]", with: "", options: .regularExpression)
+
+        // Convert the cleaned token string to Data
+        if let deviceTokenData = Data(hexString: cleanTokenString) {
+            // Conversion successful, use the deviceTokenData as needed
+            return deviceTokenData
+        }
+        
+        // Conversion failed
+        print("Failed to convert the device token string to Data")
+        return nil
+    }
 }
 
 extension UIWindow {
@@ -917,5 +940,26 @@ extension UserDefaults {
             return value as? Bool
         }
         return nil
+    }
+}
+
+extension Data {
+    init?(hexString: String) {
+        let cleanHexString = hexString.replacingOccurrences(of: "<|>| ", with: "", options: .regularExpression)
+        var data = Data(capacity: cleanHexString.count / 2)
+
+        let regex = try! NSRegularExpression(pattern: "[0-9a-f]{1,2}", options: .caseInsensitive)
+
+        regex.enumerateMatches(in: cleanHexString, range: NSRange(cleanHexString.startIndex..., in: cleanHexString)) { match, _, _ in
+            let byteString = (cleanHexString as NSString).substring(with: match!.range)
+            let num = UInt8(byteString, radix: 16)!
+            data.append(num)
+        }
+
+        guard data.count > 0 else {
+            return nil
+        }
+
+        self = data
     }
 }

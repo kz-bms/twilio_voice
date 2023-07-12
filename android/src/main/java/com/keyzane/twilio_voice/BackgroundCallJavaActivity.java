@@ -131,7 +131,7 @@ public class BackgroundCallJavaActivity extends AppCompatActivity {
     private void activateSensor() {
         if (wakeLock == null) {
             Log.d(TAG, "New wakeLog");
-            wakeLock = powerManager.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "incall");
+            wakeLock = powerManager.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "keyzane:incall");
         }
         if (!wakeLock.isHeld()) {
             Log.d(TAG, "wakeLog acquire");

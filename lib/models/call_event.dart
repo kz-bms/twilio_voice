@@ -16,5 +16,7 @@ enum CallEvent {
   missedCall,
   returningCall,
   reconnectingCall,
-  reconnected
+  reconnected,
+  bluetoothOn,
+  bluetoothOff
 }

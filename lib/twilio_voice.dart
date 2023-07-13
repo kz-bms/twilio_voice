@@ -218,6 +218,10 @@ class TwilioVoice {
         return CallEvent.speakerOn;
       case 'Speaker Off':
         return CallEvent.speakerOff;
+      case'Bluetooth On':
+        return CallEvent.bluetoothOn;
+      case 'Bluetooth Off':
+        return CallEvent.bluetoothOff;
       default:
         print('$state is not a valid CallState.');
         throw ArgumentError('$state is not a valid CallState.');
@@ -320,6 +324,12 @@ class Call {
   Future<bool?> toggleSpeaker(bool speakerIsOn) {
     return _channel.invokeMethod(
         'toggleSpeaker', <String, dynamic>{"speakerIsOn": speakerIsOn});
+  }
+
+  /// Toogles Bluetooth speaker state to provided value.
+  Future<bool?> toggleBluetoothSpeaker(bool isBluetoothInUse) {
+    return _channel.invokeMethod(
+        'toggleBluetooth', <String, dynamic>{"isBluetoothInUse": isBluetoothInUse});
   }
 
   Future<bool?> sendDigits(String digits) {

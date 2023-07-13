@@ -12,6 +12,7 @@ import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
+import android.media.AudioDeviceInfo;
 import android.os.Build;
 import android.util.Log;
 
@@ -411,6 +412,17 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
                 result.success(true);
                 break;
+
+            case "toggleBluetooth":
+                boolean isBluetoothInUse = call.argument("isBluetoothInUse");
+                if (isBluetoothInUse){
+                    audioManager.startBluetoothSco();
+                }
+                audioManager.setBluetoothScoOn(isBluetoothInUse);
+                sendPhoneCallEvents(isBluetoothInUse ? "Bluetooth On" : "Bluetooth Off");
+                result.success(true);
+                break;
+
             case "toggleMute":
                 boolean muted = call.argument("muted");
                 Log.d(TAG, "Muting call");

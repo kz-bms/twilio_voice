@@ -592,7 +592,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
         Log.d(TAG, "Answering call");
 
         activeCallInvite.accept(this.activity, callListener);
-        sendPhoneCallEvents("Answer|" + activeCallInvite.getFrom() + "|" + activeCallInvite.getTo() + formatCustomParams(activeCallInvite.getCustomParameters()));
+        sendPhoneCallEvents("Answer|" + activeCallInvite.getFrom() + "|" + activeCallInvite.getTo() + "|" +(callOutgoing ? "Outgoing" : "Incoming")+ formatCustomParams(activeCallInvite.getCustomParameters()));
         notificationManager.cancel(activeCallNotificationId);
     }
 
@@ -660,7 +660,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
             @Override
             public void onRinging(Call call) {
                 Log.d(TAG, "onRinging");
-                sendPhoneCallEvents("Ringing|" + call.getFrom() + "|" + call.getTo() + "|" + (callOutgoing ? "Outgoing" : "Incoming"));
+                sendPhoneCallEvents("Ringing|" + call.getFrom() + "|" + call.getTo() + "|" + (callOutgoing ? "Outgoing" : "Incoming") +  (callOutgoing ? "": formatCustomParams(activeCallInvite.getCustomParameters())));
             }
 
             @Override

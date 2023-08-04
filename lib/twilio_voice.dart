@@ -153,13 +153,13 @@ class TwilioVoice {
       call._activeCall = createCallFromState(state, initiated: true);
       return CallEvent.connected;
     } else if (state.startsWith("Connected|")) {
-      call._activeCall = createCallFromState(state, initiated: true);
+      call._activeCall ??= createCallFromState(state, initiated: true);
       print(
           'Connected - From: ${call._activeCall!.from}, To: ${call._activeCall!.to}, StartOn: ${call._activeCall!.initiated}, Direction: ${call._activeCall!.callDirection}');
       return CallEvent.connected;
     } else if (state.startsWith("Ringing|")) {
-      call._activeCall =
-          createCallFromState(state, callDirection: CallDirection.outgoing);
+      call._activeCall ??=
+          createCallFromState(state);
 
       print(
           'Ringing - From: ${call._activeCall!.from}, To: ${call._activeCall!.to}, Direction: ${call._activeCall!.callDirection}');
@@ -173,7 +173,7 @@ class TwilioVoice {
 
       return CallEvent.answer;
     } else if (state.startsWith("ReturningCall")) {
-      call._activeCall =
+      call._activeCall ??=
           createCallFromState(state, callDirection: CallDirection.outgoing);
 
       print(

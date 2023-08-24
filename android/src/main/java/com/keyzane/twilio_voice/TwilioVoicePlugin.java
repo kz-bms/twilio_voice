@@ -1,6 +1,7 @@
 package com.keyzane.twilio_voice;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
@@ -15,6 +16,8 @@ import android.media.AudioManager;
 import android.media.AudioDeviceInfo;
 import android.os.Build;
 import android.util.Log;
+import android.os.PowerManager;
+import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -86,6 +89,8 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
     private boolean backgroundCallUI = false;
 
     private SharedPreferences pSharedPref;
+
+    private PowerManager.WakeLock wakeLock;
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
@@ -665,6 +670,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
             @Override
             public void onConnectFailure(Call call, CallException error) {
+                setWakeLock(false);
                 setAudioFocus(false);
                 Log.d(TAG, "Connect failure");
                 String message = String.format("Call Error: %d, %s", error.getErrorCode(), error.getMessage());
@@ -674,8 +680,10 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
             }
 
+            @SuppressLint("InvalidWakeLockTag")
             @Override
             public void onConnected(Call call) {
+                setWakeLock(true);
                 setAudioFocus(true);
                 Log.d(TAG, "onConnected");
 //                eventSink.success("LOG|Connected");
@@ -702,6 +710,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
             @Override
             public void onDisconnected(Call call, CallException error) {
+                setWakeLock(false);
                 setAudioFocus(false);
                 Log.d(TAG, "Disconnected");
                 if (error != null) {
@@ -781,6 +790,24 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
                     audioManager.abandonAudioFocusRequest(focusRequest);
                 }
             }
+        }
+    }
+
+    private  void setWakeLock(boolean setWakeLock){
+        if(setWakeLock){
+            activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+            wakeLock.acquire(10*60*1000L /*10 minutes*/);
+        } else {
+
+            activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+            if(wakeLock != null){
+                wakeLock.release();
+            }
+
         }
     }
 

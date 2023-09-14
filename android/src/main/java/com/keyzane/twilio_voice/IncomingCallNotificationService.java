@@ -61,7 +61,7 @@ public class IncomingCallNotificationService extends Service {
                     handleCancelledCall(intent);
                     break;
                 case Constants.ACTION_RETURN_CALL:
-                    NotificationManagerCompat notificationManager = NotificationManagerCompat.from(activity.getApplicationContext());
+                    NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
                     notificationManager.cancel(missedCallNotificationId);
                     returnCall(intent);
                     break;

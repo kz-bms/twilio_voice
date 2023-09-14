@@ -21,6 +21,7 @@ import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.MutableLiveData;
@@ -53,7 +54,7 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
 
 public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler,
-        ActivityAware, PluginRegistry.NewIntentListener {
+        ActivityAware, PluginRegistry.NewIntentListener, PluginRegistry.RequestPermissionsResultListener {
 
     private static final String CHANNEL_NAME = "twilio_voice";
     private static final String TAG = "TwilioVoicePlugin";
@@ -91,6 +92,8 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
     private SharedPreferences pSharedPref;
 
     private PowerManager.WakeLock wakeLock;
+
+    private Intent intent;
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
@@ -183,18 +186,21 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
                         String to = intent.getStringExtra(Constants.CALL_FROM);
                         String from = intent.getStringExtra(Constants.CALL_TO);
                         Map<String, String> customParams = new HashMap<>();
-                        customParams.put("callToUser", intent.getStringExtra(Constants.CALL_TO_NAME));
-                        customParams.put("callFromUser", intent.getStringExtra(Constants.CALL_FROM_NAME));
+                        customParams.put("callToUser", intent.getStringExtra(Constants.CALL_FROM_NAME));
+                        customParams.put("callFromUser", intent.getStringExtra(Constants.CALL_TO_NAME));
 
                         Log.d(TAG, "calling: " + to);
                         params.put("toCaller", to.replace("client:", ""));
                         params.put("fromCaller", from.replace("client:", ""));
-                        sendPhoneCallEvents("ReturningCall|" + from + "|" + to + "|" + "Incoming"  + formatCustomParams(customParams));
+                        sendPhoneCallEvents("ReturningCall|" + from + "|" + to + "|" + "Outgoing"  + formatCustomParams(customParams));
                         this.callOutgoing = true;
                         final ConnectOptions connectOptions = new ConnectOptions.Builder(this.accessToken)
                                 .params(params)
                                 .build();
                         this.activeCall = Voice.connect(this.activity, connectOptions, this.callListener);
+                    }
+                    else {
+                        this.requestPermissionForMicrophone();
                     }
                     break;
                 default:
@@ -298,6 +304,33 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
         };
     }
 
+    @Override
+    public boolean onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if(requestCode == MIC_PERMISSION_REQUEST_CODE){
+            if(this.checkPermissionForMicrophone()){
+                final HashMap<String, String> params = new HashMap<>();
+
+                String to = this.intent.getStringExtra(Constants.CALL_FROM);
+                String from = this.intent.getStringExtra(Constants.CALL_TO);
+                Map<String, String> customParams = new HashMap<>();
+                customParams.put("callToUser", this.intent.getStringExtra(Constants.CALL_FROM_NAME));
+                customParams.put("callFromUser", this.intent.getStringExtra(Constants.CALL_TO_NAME));
+
+                Log.d(TAG, "calling: " + to);
+                params.put("toCaller", to.replace("client:", ""));
+                params.put("fromCaller", from.replace("client:", ""));
+                sendPhoneCallEvents("ReturningCall|" + from + "|" + to + "|" + "Outgoing"  + formatCustomParams(customParams));
+                this.callOutgoing = true;
+                final ConnectOptions connectOptions = new ConnectOptions.Builder(this.accessToken)
+                        .params(params)
+                        .build();
+                this.activeCall = Voice.connect(this.activity, connectOptions, this.callListener);
+            }
+        }
+        return true;
+    }
+
+
     private static class VoiceBroadcastReceiver extends BroadcastReceiver {
 
         private final TwilioVoicePlugin plugin;
@@ -324,6 +357,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
                         /*
                          * Handle the incoming or cancelled call invite
                          */
+                        plugin.intent = intent;
                         plugin.handleIncomingCallIntent(intent);
                         break;
                     default:
@@ -612,6 +646,13 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
     public boolean onNewIntent(@NonNull Intent intent) {
         if(intent.getAction().equals("SELECT_NOTIFICATION")) return false;
         Log.d(TAG, "onNewIntent");
+        this.intent = intent;
+
+        String action = intent.getAction();
+        if(action.contentEquals(Constants.ACTION_RETURN_CALL)){
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(activity.getApplicationContext());
+            notificationManager.cancel(100);
+        }
         this.handleIncomingCallIntent(intent);
         return false;
     }
@@ -621,6 +662,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
         Log.d(TAG, "onAttachedToActivity");
         this.activity = activityPluginBinding.getActivity();
         activityPluginBinding.addOnNewIntentListener(this);
+        activityPluginBinding.addRequestPermissionsResultListener(this);
         registerReceiver();
     }
 
@@ -637,6 +679,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
         Log.d(TAG, "onReattachedToActivityForConfigChanges");
         this.activity = activityPluginBinding.getActivity();
         activityPluginBinding.addOnNewIntentListener(this);
+        activityPluginBinding.addRequestPermissionsResultListener(this);
         registerReceiver();
     }
 
@@ -804,7 +847,7 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
             activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-            if(wakeLock != null){
+            if(  wakeLock != null && wakeLock.isHeld()){
                 wakeLock.release();
             }
 
@@ -819,11 +862,11 @@ public class TwilioVoicePlugin implements FlutterPlugin, MethodChannel.MethodCal
 
     private boolean requestPermissionForMicrophone() {
         sendPhoneCallEvents("LOG|requestPermissionForMicrophone");
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this.activity, Manifest.permission.RECORD_AUDIO)) {
+        if (this.activity.shouldShowRequestPermissionRationale( Manifest.permission.RECORD_AUDIO)) {
             sendPhoneCallEvents("RequestMicrophoneAccess");
             return false;
         } else {
-            ActivityCompat.requestPermissions(this.activity,
+            this.activity.requestPermissions(
                     new String[]{Manifest.permission.RECORD_AUDIO},
                     MIC_PERMISSION_REQUEST_CODE);
             return true;

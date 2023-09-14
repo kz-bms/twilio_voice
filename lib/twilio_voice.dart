@@ -205,6 +205,7 @@ class TwilioVoice {
         call._activeCall = null;
         return CallEvent.callEnded;
       case 'Missed Call':
+        call._activeCall = null;
         return CallEvent.missedCall;
       case 'Unhold':
         return CallEvent.unhold;

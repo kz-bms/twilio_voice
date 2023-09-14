@@ -520,13 +520,14 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         
         let fromName:String = cancelledCallInvite.customParameters?["callFromUser"] ?? defaultCaller
         let toName:String = cancelledCallInvite.customParameters?["callToUser"] ?? ""
-        let from:String? = cancelledCallInvite.from
-        let to:String = cancelledCallInvite.to
+        let from:String? = cancelledCallInvite.to
+        let to:String = cancelledCallInvite.from ?? ""
+        let payload = ["type": "missedAudioCall", "kzId": to, "name": cancelledCallInvite.customParameters?["callFromUser"] ?? "", "imageUrl":cancelledCallInvite.customParameters?["fromUserImage"] ?? ""]
         
         notificationCenter?.getNotificationSettings { (settings) in
             if settings.authorizationStatus == .authorized {
                 let content = UNMutableNotificationContent()
-                content.userInfo = ["twi_message_type": "twilio-missed-call", "from": from!, "to": to, "fromCaller": fromName, "toCaller": toName, "customParameters": cancelledCallInvite.customParameters!]
+                content.userInfo = ["twi_message_type": "twilio-missed-call", "from": from as Any, "to": to, "payload": payload ]
                 
                 content.title = String(format:  NSLocalizedString("Missed call from \(String(describing: fromName))", comment: ""))
                 
@@ -575,13 +576,13 @@ public class SwiftTwilioVoicePlugin: NSObject, FlutterPlugin,  FlutterStreamHand
         let to = (call.to ?? self.callTo)
         self.sendPhoneCallEvents(description: "Reconnecting|\(from)|\(to)|\(direction)\(formatCustomParams(params: callInvite?.customParameters))", isError: false)
     }
-
-      public func callDidReconnect(call: Call) {
-          let direction = (self.callOutgoing ? "Outgoing" : "Incoming")
-          let from = (call.from ?? self.identity)
-          let to = (call.to ?? self.callTo)
-          self.sendPhoneCallEvents(description: "Reconnected|\(from)|\(to)|\(direction)\(formatCustomParams(params: callInvite?.customParameters))", isError: false)
-      }
+    
+    public func callDidReconnect(call: Call) {
+        let direction = (self.callOutgoing ? "Outgoing" : "Incoming")
+        let from = (call.from ?? self.identity)
+        let to = (call.to ?? self.callTo)
+        self.sendPhoneCallEvents(description: "Reconnected|\(from)|\(to)|\(direction)\(formatCustomParams(params: callInvite?.customParameters))", isError: false)
+    }
     
     public func callDidFailToConnect(call: Call, error: Error) {
         self.sendPhoneCallEvents(description: "LOG|Call failed to connect: \(error.localizedDescription)", isError: false)
@@ -947,19 +948,19 @@ extension Data {
     init?(hexString: String) {
         let cleanHexString = hexString.replacingOccurrences(of: "<|>| ", with: "", options: .regularExpression)
         var data = Data(capacity: cleanHexString.count / 2)
-
+        
         let regex = try! NSRegularExpression(pattern: "[0-9a-f]{1,2}", options: .caseInsensitive)
-
+        
         regex.enumerateMatches(in: cleanHexString, range: NSRange(cleanHexString.startIndex..., in: cleanHexString)) { match, _, _ in
             let byteString = (cleanHexString as NSString).substring(with: match!.range)
             let num = UInt8(byteString, radix: 16)!
             data.append(num)
         }
-
+        
         guard data.count > 0 else {
             return nil
         }
-
+        
         self = data
     }
 }

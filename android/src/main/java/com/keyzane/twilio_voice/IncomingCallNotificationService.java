@@ -349,7 +349,7 @@ public class IncomingCallNotificationService extends Service {
 
             NotificationCompat.Builder builder =
                     new NotificationCompat.Builder(this, createChannel(NotificationManager.IMPORTANCE_HIGH))
-                            .setSmallIcon(R.drawable.splash_icon)
+                            .setSmallIcon(R.drawable.notification_icon)
                             .setContentTitle(title)
                             .setCategory(Notification.CATEGORY_MESSAGE)
                             .setAutoCancel(true)
@@ -361,7 +361,7 @@ public class IncomingCallNotificationService extends Service {
             notification = builder.build();
         } else {
             notification = new NotificationCompat.Builder(this, createChannel(NotificationManager.IMPORTANCE_HIGH))
-                    .setSmallIcon(R.drawable.splash_icon)
+                    .setSmallIcon(R.drawable.notification_icon)
                     .setContentTitle(getApplicationName(context))
                     .setContentText(title)
                     .setAutoCancel(true)
